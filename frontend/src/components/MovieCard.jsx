@@ -2,8 +2,38 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { FaStar, FaClock, FaPlay, FaTicketAlt } from "react-icons/fa";
 
+// Backend URL (works on localhost and Vercel)
+const BACKEND_URL = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000/api"
+).replace("/api", "");
+
 function MovieCard({ movie, onTrailer }) {
   const navigate = useNavigate();
+
+  // Generate correct poster URL
+  const getPosterUrl = () => {
+    if (!movie.poster) return null;
+
+    // Already a full URL
+    if (movie.poster.startsWith("http")) {
+      return movie.poster;
+    }
+
+    // uploads/posters/xyz.jpg
+    if (movie.poster.startsWith("uploads/")) {
+      return `${BACKEND_URL}/${movie.poster}`;
+    }
+
+    // posters/xyz.jpg
+    if (movie.poster.startsWith("posters/")) {
+      return `${BACKEND_URL}/${movie.poster}`;
+    }
+
+    // Only filename -> uploads/posters/filename.jpg
+    return `${BACKEND_URL}/uploads/posters/${movie.poster
+      .split(/[\\/]/)
+      .pop()}`;
+  };
 
   return (
     <motion.div
@@ -13,9 +43,13 @@ function MovieCard({ movie, onTrailer }) {
     >
       <div className="relative overflow-hidden">
         <img
-          src={movie.poster}
+          src={getPosterUrl()}
           alt={movie.title}
           className="h-[420px] w-full object-cover transition duration-500 group-hover:scale-110"
+          onError={(e) => {
+            e.currentTarget.src =
+              "https://placehold.co/400x600/111827/FACC15?text=No+Poster";
+          }}
         />
 
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-90" />
@@ -46,9 +80,7 @@ function MovieCard({ movie, onTrailer }) {
       <div className="space-y-3 p-5">
         <button
           onClick={() =>
-            onTrailer
-              ? onTrailer(movie)
-              : window.open(movie.trailer, "_blank")
+            onTrailer ? onTrailer(movie) : window.open(movie.trailer, "_blank")
           }
           className="flex w-full items-center justify-center gap-3 rounded-xl border border-yellow-400 px-4 py-3 text-yellow-300 transition hover:bg-yellow-400 hover:text-black"
         >
