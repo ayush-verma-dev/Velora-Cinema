@@ -17,15 +17,11 @@ export const movies = [
     description:
       "Peter Parker devotes his life to protecting New York City as a full-time Spider-Man. But as the demands on him intensify, the pressure sparks a surprising physical evolution that threatens his existence, even as a strange new pattern of crimes gives rise to one of the most powerful threats he's ever faced.",
 
-    cast: [
-      "Tom Holland",
-      "Sadie Sink",
-      "Zendaya",
-    ],
+    cast: ["Tom Holland", "Sadie Sink", "Zendaya"],
 
     highlights: [
       "Grounded Action",
-      "Great power - Great loneliness",
+      "Great Power • Great Loneliness",
       "BRAND NEW DAY",
     ],
 
@@ -57,7 +53,7 @@ export const movies = [
 
     highlights: [
       "Spy Thriller",
-      "Global Cinemattic Scale",
+      "Global Cinematic Scale",
       "Massive Narrative Journey",
     ],
 
@@ -78,7 +74,7 @@ export const movies = [
     format: "Dolby Atmos",
     trailer: "https://youtu.be/gMC8kkwbIQQ?si=eFxIpCzKCPwnFNAk",
     description:
-      `After breaking the mysterious "One Wish Willow" to win his crush's heart, a hopeless romantic gets exactly what he asked for. However, he soon discovers that some desires come at a dark and sinister price.`,
+      "After breaking the mysterious 'One Wish Willow' to win his crush's heart, a hopeless romantic gets exactly what he asked for. However, he soon discovers that some desires come at a dark and sinister price.",
 
     cast: [
       "Inde Navarrette",
@@ -89,7 +85,7 @@ export const movies = [
     highlights: [
       "Dark Fairytale",
       "Twisted Ending",
-      "Haunting soundtrack",
+      "Haunting Soundtrack",
     ],
 
     showtimes: ["11:00 AM", "2:00 PM", "6:00 PM", "10:00 PM"],

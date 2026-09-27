@@ -2,24 +2,54 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { FaStar, FaClock, FaPlay, FaTicketAlt } from "react-icons/fa";
-import { movies } from "../data/movies";
+import API from "../services/api";
 
-// Backend URL (works for localhost and Vercel)
 const BACKEND_URL = (
   import.meta.env.VITE_API_URL || "http://localhost:5000/api"
 ).replace("/api", "");
 
 function FloatingPosters() {
   const navigate = useNavigate();
+
+  const [movies, setMovies] = useState([]);
   const [current, setCurrent] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    fetchMovies();
+  }, []);
+
+  useEffect(() => {
+    if (movies.length === 0) return;
+
     const timer = setInterval(() => {
       setCurrent((prev) => (prev + 1) % movies.length);
     }, 5000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [movies]);
+
+  async function fetchMovies() {
+    try {
+      const { data } = await API.get("/movies");
+
+      if (data.success) {
+        setMovies(data.movies);
+      }
+    } catch (error) {
+      console.error("Failed to load hero movies:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading || movies.length === 0) {
+    return (
+      <div className="flex h-[560px] items-center justify-center">
+        <div className="h-14 w-14 animate-spin rounded-full border-4 border-yellow-400 border-t-transparent"></div>
+      </div>
+    );
+  }
 
   const getIndex = (offset) =>
     (current + offset + movies.length) % movies.length;
@@ -51,11 +81,13 @@ function FloatingPosters() {
   return (
     <div className="relative flex h-[560px] w-full items-center justify-center overflow-hidden">
       {cards.map((card) => {
-        const posterName = card.movie.poster?.split(/[\\/]/).pop();
+        const posterUrl = card.movie.poster.startsWith("http")
+          ? card.movie.poster
+          : `${BACKEND_URL}/${card.movie.poster.replace(/^\/+/, "")}`;
 
         return (
           <motion.div
-            key={card.movie.id}
+            key={card.movie._id}
             initial={false}
             animate={{
               x: card.offset,
@@ -68,14 +100,14 @@ function FloatingPosters() {
               damping: 22,
             }}
             onClick={() =>
-              setCurrent(movies.findIndex((m) => m.id === card.movie.id))
+              setCurrent(movies.findIndex((m) => m._id === card.movie._id))
             }
             style={{ zIndex: card.z }}
             className="absolute w-[230px] cursor-pointer overflow-hidden rounded-[30px] border border-yellow-400/20 bg-[#121826] shadow-[0_20px_60px_rgba(0,0,0,.45)]"
           >
             <div className="relative h-[330px]">
               <img
-                src={`${BACKEND_URL}/uploads/posters/${posterName}`}
+                src={posterUrl}
                 alt={card.movie.title}
                 className="h-full w-full object-cover"
                 onError={(e) => {
@@ -132,7 +164,6 @@ function FloatingPosters() {
         );
       })}
 
-      {/* Dots */}
       <div className="absolute bottom-3 flex gap-2">
         {movies.map((_, index) => (
           <button

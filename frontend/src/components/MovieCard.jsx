@@ -2,7 +2,6 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { FaStar, FaClock, FaPlay, FaTicketAlt } from "react-icons/fa";
 
-// Backend URL (works on localhost and Vercel)
 const BACKEND_URL = (
   import.meta.env.VITE_API_URL || "http://localhost:5000/api"
 ).replace("/api", "");
@@ -10,29 +9,16 @@ const BACKEND_URL = (
 function MovieCard({ movie, onTrailer }) {
   const navigate = useNavigate();
 
-  // Generate correct poster URL
   const getPosterUrl = () => {
-    if (!movie.poster) return null;
+    if (!movie.poster) return "";
 
-    // Already a full URL
     if (movie.poster.startsWith("http")) {
       return movie.poster;
     }
 
-    // uploads/posters/xyz.jpg
-    if (movie.poster.startsWith("uploads/")) {
-      return `${BACKEND_URL}/${movie.poster}`;
-    }
+    const filename = movie.poster.split(/[\\/]/).pop();
 
-    // posters/xyz.jpg
-    if (movie.poster.startsWith("posters/")) {
-      return `${BACKEND_URL}/${movie.poster}`;
-    }
-
-    // Only filename -> uploads/posters/filename.jpg
-    return `${BACKEND_URL}/uploads/posters/${movie.poster
-      .split(/[\\/]/)
-      .pop()}`;
+    return `${BACKEND_URL}/${filename}`;
   };
 
   return (

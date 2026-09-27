@@ -14,6 +14,11 @@ import API from "../services/api";
 import MovieFilters from "../components/MovieFilters";
 import TrailerModal from "../components/TrailerModal";
 
+const BACKEND_URL = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000/api"
+).replace("/api", "");
+
+
 function Movies() {
   const navigate = useNavigate();
 
@@ -225,7 +230,6 @@ function Movies() {
         {tab === "movies" && (
           <>
             {/* Featured Banner */}
-
             <AnimatePresence mode="wait">
               <motion.div
                 key={featured}
@@ -237,27 +241,30 @@ function Movies() {
               >
                 <img
                   src={
-                    moviesData[featured]?.poster
-                      ? `http://localhost:5000/posters/${moviesData[featured].poster
-                          .split(/[\\/]/)
+                    moviesData[featured]?.poster?.startsWith("http")
+                      ? moviesData[featured].poster
+                      : `${BACKEND_URL}/${moviesData[featured]?.poster
+                          ?.split(/[\\/]/)
                           .pop()}`
-                      : "/placeholder-poster.png"
                   }
                   alt={moviesData[featured]?.title || "Movie Poster"}
                   className="h-[420px] w-full object-cover sm:h-[420px] md:h-[560px]"
+                  onError={(e) => {
+                    e.currentTarget.src =
+                      "https://placehold.co/1200x700/111827/FACC15?text=No+Poster";
+                  }}
                 />
 
                 <div className="absolute inset-0 bg-gradient-to-r from-[#05070F] via-[#05070F]/75 to-transparent" />
 
                 <div className="absolute inset-0 flex items-end px-4 pb-6 pt-6 sm:items-center sm:px-8 md:px-20">
-                    <div className="w-full max-w-full sm:max-w-3xl">
-
+                  <div className="w-full max-w-full sm:max-w-3xl">
                     <span className="inline-flex rounded-full border border-yellow-400/40 bg-yellow-400/10 px-3 py-1 text-xs font-semibold text-yellow-300 sm:px-5 sm:py-2 sm:text-sm">
-                        Featured Premiere
+                      Featured Premiere
                     </span>
 
                     <h1 className="mt-2 text-[26px] font-bold leading-tight sm:mt-5 sm:text-5xl md:mt-8 md:text-7xl">
-                        {moviesData[featured]?.title}
+                      {moviesData[featured]?.title}
                     </h1>
 
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-300 sm:mt-8 sm:gap-4 sm:text-sm">
@@ -282,10 +289,10 @@ function Movies() {
                       <button
                         aria-label={`Watch trailer for ${moviesData[featured]?.title || "movie"}`}
                         onClick={() => {
-                            setSelectedMovie(moviesData[featured]);
-                            setTrailerOpen(true);
+                          setSelectedMovie(moviesData[featured]);
+                          setTrailerOpen(true);
                         }}
-                        className="flex items-center gap-2 rounded-full border border-yellow-400 px-5 py-3 text-sm text-yellow-300 hover:bg-yellow-400 hover:text-black sm:px-8 sm:py-4 sm:text-lg"
+                        className="flex items-center gap-2 rounded-full border border-yellow-400 px-5 py-3 text-sm text-yellow-300 transition hover:bg-yellow-400 hover:text-black sm:px-8 sm:py-4 sm:text-lg"
                       >
                         <FaPlay />
                         Watch Trailer
@@ -294,15 +301,16 @@ function Movies() {
                       <button
                         aria-label={`Book tickets for ${moviesData[featured]?.title || "movie"}`}
                         onClick={() =>
-                            navigate(`/movie/${moviesData[featured]?.slug || moviesData[featured]?._id}`)
+                          navigate(
+                            `/movie/${moviesData[featured]?.slug || moviesData[featured]?._id}`
+                          )
                         }
-                        className="flex items-center gap-2 rounded-full bg-yellow-400 px-5 py-3 text-sm font-semibold text-black hover:bg-yellow-300 sm:px-8 sm:py-4 sm:text-lg"
+                        className="flex items-center gap-2 rounded-full bg-yellow-400 px-5 py-3 text-sm font-semibold text-black transition hover:bg-yellow-300 sm:px-8 sm:py-4 sm:text-lg"
                       >
                         <FaTicketAlt />
                         Book Now
                       </button>
                     </div>
-
                   </div>
                 </div>
               </motion.div>
@@ -404,11 +412,15 @@ function Movies() {
                   className="overflow-hidden rounded-3xl border border-white/10 bg-[#151A26]"
                 >
                   <img
-                    src={`http://localhost:5000/posters/${movie.poster
-                      .split(/[\\/]/)
+                    src={`${BACKEND_URL}/${movie.poster
+                      ?.split(/[\\/]/)
                       .pop()}`}
                     alt={movie.title}
                     className="h-[300px] w-full object-cover sm:h-[380px] lg:h-[430px]"
+                    onError={(e) => {
+                      e.currentTarget.src =
+                        "https://placehold.co/400x600/111827/FACC15?text=No+Poster";
+                    }}
                   />
 
                   <div className="p-6">
