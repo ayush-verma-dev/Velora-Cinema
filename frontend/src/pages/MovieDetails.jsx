@@ -14,6 +14,11 @@ import {
 
 import TrailerModal from "../components/TrailerModal";
 
+// Backend URL (works on localhost and Vercel)
+const BACKEND_URL = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000/api"
+).replace("/api", "");
+
 function MovieDetails() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -21,7 +26,6 @@ function MovieDetails() {
   const [movie, setMovie] = useState(null);
   const [loading, setLoading] = useState(true);
   const [trailerOpen, setTrailerOpen] = useState(false);
-
 
   useEffect(() => {
     fetchMovie();
@@ -40,15 +44,15 @@ function MovieDetails() {
   };
 
   if (loading) {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0B0F19] text-white">
-      <div className="text-center">
-        <div className="mx-auto h-14 w-14 animate-spin rounded-full border-4 border-yellow-400 border-t-transparent"></div>
-        <p className="mt-5 text-lg text-gray-400">Loading Movie...</p>
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0B0F19] text-white">
+        <div className="text-center">
+          <div className="mx-auto h-14 w-14 animate-spin rounded-full border-4 border-yellow-400 border-t-transparent"></div>
+          <p className="mt-5 text-lg text-gray-400">Loading Movie...</p>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   if (!movie) {
     return (
@@ -67,21 +71,28 @@ function MovieDetails() {
     );
   }
 
+  const heroPoster = `${BACKEND_URL}/uploads/posters/${movie.poster
+    ?.split(/[\\/]/)
+    .pop()}`;
+
   return (
     <div className="min-h-screen bg-[#0B0F19] text-white">
-
       {/* Hero */}
 
-      <section className="relative min-h-[900px] sm:min-h-[760px] lg:min-h-[90vh] overflow-hidden pt-24 sm:pt-28">
+      <section className="relative min-h-[900px] overflow-hidden pt-24 sm:min-h-[760px] sm:pt-28 lg:min-h-[90vh]">
         <img
-          src={`http://localhost:5000/posters/${movie.poster.split(/[\\/]/).pop()}`}
+          src={heroPoster}
           alt={movie.title}
           className="absolute inset-0 h-full w-full object-cover"
+          onError={(e) => {
+            e.currentTarget.src =
+              "https://placehold.co/1200x800/111827/FACC15?text=No+Poster";
+          }}
         />
 
         <div className="absolute inset-0 bg-gradient-to-r from-[#05070F] via-[#05070F]/80 to-[#05070F]/30" />
 
-        <div className="relative mx-auto flex h-full max-w-7xl flex-col justify-center px-6 pt-10 pb-16 sm:flex-row sm:items-center sm:justify-between sm:pb-0">
+        <div className="relative mx-auto flex h-full max-w-7xl flex-col justify-center px-6 pb-16 pt-10 sm:flex-row sm:items-center sm:justify-between sm:pb-0">
           <motion.div
             initial={{ opacity: 0, x: -35 }}
             animate={{ opacity: 1, x: 0 }}
@@ -124,7 +135,7 @@ function MovieDetails() {
             <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:gap-5">
               <button
                 onClick={() => setTrailerOpen(true)}
-                className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-full border border-yellow-400 px-6 py-3 sm:px-8 sm:py-4 text-base sm:text-lg text-yellow-300 transition hover:bg-yellow-400 hover:text-black"
+                className="flex w-full items-center justify-center gap-2 rounded-full border border-yellow-400 px-6 py-3 text-base text-yellow-300 transition hover:bg-yellow-400 hover:text-black sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
               >
                 <FaPlay />
                 Watch Trailer
@@ -138,10 +149,10 @@ function MovieDetails() {
                     state: {
                       movie,
                       movieId: movie._id,
-                    }
+                    },
                   });
                 }}
-                className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-full bg-yellow-400 px-6 py-3 sm:px-8 sm:py-4 text-base sm:text-lg font-semibold text-black transition hover:bg-yellow-300"
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-yellow-400 px-6 py-3 text-base font-semibold text-black transition hover:bg-yellow-300 sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
               >
                 <FaTicketAlt />
                 Book Tickets
@@ -154,7 +165,6 @@ function MovieDetails() {
       {/* Content */}
 
       <div className="mx-auto max-w-7xl px-6 py-16">
-
         <section className="mb-20">
           <h2 className="mb-8 text-4xl font-bold">About the Movie</h2>
 
@@ -168,58 +178,61 @@ function MovieDetails() {
         {/* Cast */}
 
         {movie.cast?.length > 0 && (
-        <section className="mb-20">
-          <h2 className="mb-8 text-4xl font-bold">Cast</h2>
+          <section className="mb-20">
+            <h2 className="mb-8 text-4xl font-bold">Cast</h2>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {(movie.cast ?? []).map((actor, index) => (
-              <motion.div
-                key={actor}
-                whileHover={{ y: -8, scale: 1.02 }}
-                className="overflow-hidden rounded-3xl border border-white/10 bg-[#151A26]"
-              >
-                <div
-                  className={`flex h-56 items-center justify-center text-6xl font-bold ${
-                    index % 4 === 0
-                      ? "bg-gradient-to-br from-yellow-500 via-orange-500 to-red-600"
-                      : index % 4 === 1
-                      ? "bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-700"
-                      : index % 4 === 2
-                      ? "bg-gradient-to-br from-purple-500 via-pink-500 to-red-500"
-                      : "bg-gradient-to-br from-green-500 via-emerald-600 to-teal-700"
-                  }`}
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {(movie.cast ?? []).map((actor, index) => (
+                <motion.div
+                  key={actor}
+                  whileHover={{ y: -8, scale: 1.02 }}
+                  className="overflow-hidden rounded-3xl border border-white/10 bg-[#151A26]"
                 >
-                  {actor.split(" ").map((n) => n[0]).join("")}
-                </div>
+                  <div
+                    className={`flex h-56 items-center justify-center text-6xl font-bold ${
+                      index % 4 === 0
+                        ? "bg-gradient-to-br from-yellow-500 via-orange-500 to-red-600"
+                        : index % 4 === 1
+                        ? "bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-700"
+                        : index % 4 === 2
+                        ? "bg-gradient-to-br from-purple-500 via-pink-500 to-red-500"
+                        : "bg-gradient-to-br from-green-500 via-emerald-600 to-teal-700"
+                    }`}
+                  >
+                    {actor
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
+                  </div>
 
-                <div className="p-5 text-center">
-                  <h3 className="text-lg font-bold">{actor}</h3>
-                  <p className="mt-2 text-sm text-gray-400">Lead Cast</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </section>
+                  <div className="p-5 text-center">
+                    <h3 className="text-lg font-bold">{actor}</h3>
+                    <p className="mt-2 text-sm text-gray-400">Lead Cast</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </section>
         )}
 
         {/* Highlights */}
 
         {movie.highlights?.length > 0 && (
-        <section className="mb-20">
-          <h2 className="mb-8 text-4xl font-bold">Highlights</h2>
+          <section className="mb-20">
+            <h2 className="mb-8 text-4xl font-bold">Highlights</h2>
 
-          <div className="grid gap-6 md:grid-cols-3">
-            {(movie.highlights ?? []).map((item) => (
-              <div
-                key={item}
-                className="rounded-3xl border border-yellow-400/20 bg-[#151A26] p-6"
-              >
-                <FaCheckCircle className="text-3xl text-yellow-400" />
-                <p className="mt-5 text-lg">{item}</p>
-              </div>
-            ))}
-          </div>
-        </section>
+            <div className="grid gap-6 md:grid-cols-3">
+              {(movie.highlights ?? []).map((item) => (
+                <div
+                  key={item}
+                  className="rounded-3xl border border-yellow-400/20 bg-[#151A26] p-6"
+                >
+                  <FaCheckCircle className="text-3xl text-yellow-400" />
+                  <p className="mt-5 text-lg">{item}</p>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
         {/* Gallery */}
@@ -228,54 +241,64 @@ function MovieDetails() {
           <h2 className="mb-8 text-4xl font-bold">Gallery</h2>
 
           <div className="grid gap-6 md:grid-cols-3">
-            {(movie.gallery?.length ? movie.gallery : [movie.poster, movie.poster, movie.poster]).map(
-              (image, index) => (
+            {(movie.gallery?.length
+              ? movie.gallery
+              : [movie.poster, movie.poster, movie.poster]
+            ).map((image, index) => {
+              const galleryUrl = `${BACKEND_URL}/uploads/posters/${image
+                .split(/[\\/]/)
+                .pop()}`;
+
+              return (
                 <div key={index} className="overflow-hidden rounded-3xl">
                   <img
-                    src={`http://localhost:5000/posters/${image.split(/[\\/]/).pop()}`}
+                    src={galleryUrl}
                     alt={`${movie.title}-${index}`}
                     className="h-72 w-full object-cover transition duration-500 hover:scale-110"
+                    onError={(e) => {
+                      e.currentTarget.src =
+                        "https://placehold.co/600x400/111827/FACC15?text=No+Poster";
+                    }}
                   />
                 </div>
-              )
-            )}
+              );
+            })}
           </div>
         </section>
 
         {/* Showtimes */}
 
         {movie.showtimes?.length > 0 && (
-        <section>
-          <h2 className="mb-8 text-4xl font-bold">Available Showtimes</h2>
+          <section>
+            <h2 className="mb-8 text-4xl font-bold">Available Showtimes</h2>
 
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {(movie.showtimes ?? []).map((time) => (
-              <button
-                key={time}
-                onClick={() => {
-                  window.scrollTo({
-                    top: 0,
-                    left: 0,
-                    behavior: "instant",
-                  });
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {(movie.showtimes ?? []).map((time) => (
+                <button
+                  key={time}
+                  onClick={() => {
+                    window.scrollTo({
+                      top: 0,
+                      left: 0,
+                      behavior: "instant",
+                    });
 
-                  navigate("/theaters", {
-                    state: {
-                      movie,
-                      movieId: movie._id,
-                      selectedTime: time,
-                    },
-                  });
-                }}
-                className="rounded-2xl border border-yellow-400/20 bg-[#151A26] px-6 py-5 hover:bg-yellow-400 hover:text-black"
-              >
-                {time}
-              </button>
-            ))}
-          </div>
-        </section>
+                    navigate("/theaters", {
+                      state: {
+                        movie,
+                        movieId: movie._id,
+                        selectedTime: time,
+                      },
+                    });
+                  }}
+                  className="rounded-2xl border border-yellow-400/20 bg-[#151A26] px-6 py-5 hover:bg-yellow-400 hover:text-black"
+                >
+                  {time}
+                </button>
+              ))}
+            </div>
+          </section>
         )}
-
       </div>
 
       <TrailerModal
