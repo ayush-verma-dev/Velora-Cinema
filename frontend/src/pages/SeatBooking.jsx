@@ -266,17 +266,27 @@ const handlePayment = async () => {
     }
 
     // Step 2: Create Razorpay order
+    const payload = {
+      movieId: movie?._id,
+      theaterId: theater?._id,
+      showId,
+      showtime: selectedShow?.time,
+      seats: selectedSeats,
+      totalPrice,
+      paymentId: paymentData.razorpay_payment_id,
+    };
+
+    console.log("Booking payload:", payload);
+
     const { data } = await API.post(
       "/bookings/create",
+      payload,
       {
-        movieId: movie._id,
-        theaterId: theater._id,
-        showId: showId,
-        showtime: selectedShow.time, // <-- ADD THIS
-        seats: selectedSeats,
-        totalPrice,
-        paymentId: paymentData.razorpay_payment_id,
-      },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
     const order = data.order;
     amount: data.order.amount;
