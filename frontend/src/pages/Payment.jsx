@@ -130,16 +130,6 @@ function Payment() {
               paymentStatus: "paid",
             };
 
-            const previous =
-              JSON.parse(localStorage.getItem("veloraTickets")) || [];
-
-            previous.push(ticket);
-
-            localStorage.setItem(
-              "veloraTickets",
-              JSON.stringify(previous)
-            );
-
             localStorage.removeItem("veloraBooking");
 
             navigate(`/ticket/${bookingRes.data.booking.bookingId}`, {

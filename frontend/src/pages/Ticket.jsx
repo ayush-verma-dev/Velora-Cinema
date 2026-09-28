@@ -113,8 +113,10 @@ function Ticket() {
     "";
 
   const moviePoster = posterFile
-    ? `${BACKEND_URL}/${posterFile.split(/[\\/]/).pop()}`
-    : null;
+    ? posterFile.startsWith("http")
+      ? posterFile
+      : `${BACKEND_URL}/uploads/${posterFile.split(/[\\/]/).pop()}`
+    : "https://placehold.co/300x450/111827/FACC15?text=No+Poster";
 
   const formattedShowDate = ticket.show?.date
     ? new Date(ticket.show.date).toLocaleDateString("en-IN", {
@@ -212,6 +214,10 @@ function Ticket() {
                   src={moviePoster}
                   alt={ticket.movie?.title || ticket.bookingInfo?.movie}
                   className="h-28 rounded-2xl object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src =
+                      "https://placehold.co/300x450/111827/FACC15?text=No+Poster";
+                  }}
                 />
               )}
             </div>

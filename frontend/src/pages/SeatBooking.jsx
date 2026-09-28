@@ -407,6 +407,7 @@ const verifyPayment = async (paymentData) => {
     setSelectedSeats([]);
 
     // Go directly to generated ticket
+    console.log("Navigating to:", `/ticket/${data.booking.bookingId}`);
     navigate(`/ticket/${data.booking.bookingId}`, {
       state: data.booking,
       replace: true,
