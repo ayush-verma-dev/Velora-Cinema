@@ -5,6 +5,11 @@ import { useNavigate } from "react-router-dom";
 //import { movies } from "../data/movies";
 import API from "../services/api";
 
+// Backend URL (works for localhost and Render/Vercel)
+const BACKEND_URL = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000/api"
+).replace("/api", "");
+
 function SearchModal({ open, onClose }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -264,11 +269,15 @@ function SearchModal({ open, onClose }) {
                     <img
                       src={
                         movie.poster
-                          ? `http://localhost:5000/${movie.poster}`
+                          ? `${BACKEND_URL}/${movie.poster.split(/[\\/]/).pop()}`
                           : "https://placehold.co/140x200/111827/FACC15?text=No+Poster"
                       }
                       alt={movie.title}
-                      className="h-16 w-12 rounded-lg object-cover"
+                      className="h-16 w-12 flex-shrink-0 rounded-lg object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src =
+                          "https://placehold.co/140x200/111827/FACC15?text=No+Poster";
+                      }}
                     />
 
                     <div className="text-left">
