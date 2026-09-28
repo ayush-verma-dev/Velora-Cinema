@@ -102,11 +102,15 @@ export const createBooking = async (req, res) => {
       showtime,
       seats: seatIds,
       totalPrice,
+
       bookingId: generateBookingId(),
+
       paymentOrderId,
       paymentId,
       paymentMethod,
+
       paymentStatus: "paid",
+      status: "confirmed", // ← ADD THIS
     });
 
     // Reserve seats permanently

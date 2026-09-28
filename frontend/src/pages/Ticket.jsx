@@ -11,6 +11,10 @@ import {
   FaHome,
 } from "react-icons/fa";
 
+const BACKEND_URL = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000/api"
+).replace("/api", "");
+
 function Ticket() {
   const navigate = useNavigate();
   const { bookingId } = useParams();
@@ -80,7 +84,7 @@ function Ticket() {
   }
 
   const moviePoster = ticket.movie?.poster
-    ? `http://localhost:5000/${ticket.movie.poster.split("/").pop()}`
+    ? `${BACKEND_URL}/${ticket.movie.poster.split(/[\\/]/).pop()}`
     : null;
 
   const formattedShowDate = ticket.show?.date

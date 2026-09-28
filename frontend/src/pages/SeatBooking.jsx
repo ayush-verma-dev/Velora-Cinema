@@ -12,6 +12,10 @@ import {
 import SeatHoldTimer from "../components/SeatHoldTimer";
 import SeatExpiredModal from "../components/SeatExpiredModal";
 
+const BACKEND_URL = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000/api"
+).replace("/api", "");
+
 function SeatBooking() {
   const navigate = useNavigate();
   const { state } = useLocation();
@@ -390,7 +394,18 @@ const verifyPayment = async (paymentData) => {
 
     await fetchShow();
 
-    navigate(`/ticket/${data.booking.bookingId}`);
+    const ticketId =
+      data.booking?._id ||
+      data.booking?.bookingId ||
+      data.ticket?._id;
+
+    if (!ticketId) {
+      console.error("Backend response:", data);
+      alert("Booking created, but ticket ID was not returned.");
+      return;
+    }
+
+    navigate(`/ticket/${ticketId}`);
 
   } catch (error) {
     console.error("Verification/Booking Error:", error);
@@ -416,11 +431,15 @@ const verifyPayment = async (paymentData) => {
           <img
             src={
               movie?.poster
-                ? `http://localhost:5000/${movie.poster.split("/").pop()}`
+                ? `${BACKEND_URL}/${movie.poster.split(/[\\/]/).pop()}`
                 : "https://placehold.co/300x450/111827/FACC15?text=Movie"
             }
             alt={movie.title}
             className="h-56 w-40 rounded-2xl object-cover shadow-xl"
+            onError={(e) => {
+              e.currentTarget.src =
+                "https://placehold.co/300x450/111827/FACC15?text=Movie";
+            }}
           />
 
           <div className="flex-1">
@@ -539,11 +558,15 @@ const verifyPayment = async (paymentData) => {
             <img
               src={
                 movie?.poster
-                  ? `http://localhost:5000/${movie.poster.split("/").pop()}`
+                  ? `${BACKEND_URL}/${movie.poster.split(/[\\/]/).pop()}`
                   : "https://placehold.co/300x450/111827/FACC15?text=Movie"
               }
               alt={movie.title}
               className="mt-6 h-40 w-full rounded-xl object-cover"
+              onError={(e) => {
+                e.currentTarget.src =
+                  "https://placehold.co/300x450/111827/FACC15?text=Movie";
+              }}
             />
 
             <div className="mt-6 space-y-4">
