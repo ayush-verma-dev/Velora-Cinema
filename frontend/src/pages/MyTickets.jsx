@@ -83,6 +83,7 @@ function MyTickets() {
         ) : (
           <div className="grid gap-8 md:grid-cols-2">
             {tickets.map((ticket) => {
+              console.log("Ticket movie:", ticket.movie);
               const posterFile = ticket.movie?.poster || "";
               const posterUrl = posterFile
                 ? `${BACKEND_URL}/${posterFile.split(/[\\/]/).pop()}`
