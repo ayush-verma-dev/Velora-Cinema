@@ -343,8 +343,12 @@ const handlePayment = async () => {
 // Payment Success
 // ==========================
 
+console.log("verifyPayment started");
+
 const verifyPayment = async (paymentData) => {
   try {
+    console.log("verifyPayment started");
+
     const token = localStorage.getItem("token");
 
     // Step 1: Verify payment signature with backend
@@ -361,6 +365,8 @@ const verifyPayment = async (paymentData) => {
         },
       }
     );
+
+    console.log("Verification response:", verifyRes.data);
 
     if (!verifyRes.data.success) {
       alert("Payment verification failed.");
@@ -389,29 +395,33 @@ const verifyPayment = async (paymentData) => {
         },
       }
     );
-
-    console.log("Booking Created:", data);
+    console.log("Create booking response:", data);
 
     //await fetchShow();
 
     console.log("Booking Created:", data);
 
-    if (!data.booking) {
-      console.error("Backend response:", data);
-      alert("Booking created, but ticket data was not returned.");
+    // Backend must return booking
+    if (!data.success || !data.booking || !data.booking.bookingId) {
+      console.error("Invalid booking response:", data);
+      alert("Ticket created but booking ID was not returned.");
       return;
     }
 
-    // Stop timer and clear selected seats
+    // Stop timer
     setTimerActive(false);
     setSelectedSeats([]);
+    await fetchShow();
 
-    // Go directly to generated ticket
-    console.log("Navigating to:", `/ticket/${data.booking.bookingId}`);
-    navigate(`/ticket/${data.booking.bookingId}`, {
-      state: data.booking,
-      replace: true,
-    });
+    // Give Razorpay modal a moment to close
+    setTimeout(() => {
+      console.log("Redirecting to ticket:", `/ticket/${data.booking.bookingId}`);
+      
+      navigate(`/ticket/${data.booking.bookingId}`, {
+        state: data.booking,
+        replace: true,
+      });
+    }, 300);
 
   } catch (error) {
     console.error("Verification/Booking Error:", error);
@@ -419,6 +429,7 @@ const verifyPayment = async (paymentData) => {
     alert("Payment succeeded but booking creation failed.");
   }
 };
+console.log("Verification response:", verifyRes.data);
 
   return (
     <div className="min-h-screen bg-[#0B0F19] py-10 text-white">
