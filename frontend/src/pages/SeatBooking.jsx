@@ -343,8 +343,6 @@ const handlePayment = async () => {
 // Payment Success
 // ==========================
 
-console.log("verifyPayment started");
-
 const verifyPayment = async (paymentData) => {
   try {
     console.log("verifyPayment started");
@@ -416,7 +414,7 @@ const verifyPayment = async (paymentData) => {
     // Give Razorpay modal a moment to close
     setTimeout(() => {
       console.log("Redirecting to ticket:", `/ticket/${data.booking.bookingId}`);
-      
+
       navigate(`/ticket/${data.booking.bookingId}`, {
         state: data.booking,
         replace: true,
@@ -429,7 +427,6 @@ const verifyPayment = async (paymentData) => {
     alert("Payment succeeded but booking creation failed.");
   }
 };
-console.log("Verification response:", verifyRes.data);
 
   return (
     <div className="min-h-screen bg-[#0B0F19] py-10 text-white">
