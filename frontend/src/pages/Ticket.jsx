@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { QRCodeCanvas } from "qrcode.react";
 import html2canvas from "html2canvas";
@@ -18,13 +18,36 @@ const BACKEND_URL = (
 function Ticket() {
   const navigate = useNavigate();
   const { bookingId } = useParams();
+  const location = useLocation();
   const ticketRef = useRef();
 
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchTicket() {
+    async function loadTicket() {
+      // 1. Ticket passed directly from Payment.jsx
+      if (location.state) {
+        setTicket(location.state);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Check localStorage
+      const localTickets =
+        JSON.parse(localStorage.getItem("veloraTickets")) || [];
+
+      const localTicket = localTickets.find(
+        (t) => t.bookingId === bookingId
+      );
+
+      if (localTicket) {
+        setTicket(localTicket);
+        setLoading(false);
+        return;
+      }
+
+      // 3. Fetch from backend
       try {
         const { data } = await API.get("/bookings/my");
 
@@ -44,8 +67,8 @@ function Ticket() {
       }
     }
 
-    fetchTicket();
-  }, [bookingId]);
+    loadTicket();
+  }, [bookingId, location.state]);
 
   if (loading) {
     return (
@@ -83,8 +106,23 @@ function Ticket() {
     );
   }
 
-  const moviePoster = ticket.movie?.poster
-    ? `${BACKEND_URL}/${ticket.movie.poster.split(/[\\/]/).pop()}`
+  const posterFile =
+    ticket.movie?.poster ||
+    ticket.poster ||
+    ticket.bookingInfo?.poster ||
+    "";
+
+  <img
+    src={`${BACKEND_URL}/${posterFile.split(/[\\/]/).pop()}`}
+    alt={ticket.movie?.title || ticket.bookingInfo?.movie}
+    onError={(e) => {
+      e.currentTarget.src =
+        "https://placehold.co/400x600/111827/FACC15?text=No+Poster";
+    }}
+  />
+
+  const moviePoster = posterFile
+    ? `${BACKEND_URL}/${posterFile.split(/[\\/]/).pop()}`
     : null;
 
   const formattedShowDate = ticket.show?.date
