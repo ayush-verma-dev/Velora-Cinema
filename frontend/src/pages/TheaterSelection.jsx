@@ -11,6 +11,20 @@ import {
   FaChair,
 } from "react-icons/fa";
 
+// Backend URL
+const BACKEND_URL = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000/api"
+).replace("/api", "");
+
+// Convert poster name to correct URL
+const getPosterUrl = (poster) => {
+  if (!poster) return "";
+
+  if (poster.startsWith("http")) return poster;
+
+  return `${BACKEND_URL}/${poster.split(/[\\/]/).pop()}`;
+};
+
 function TheaterSelection() {
   const navigate = useNavigate();
   const { state } = useLocation();
@@ -269,15 +283,17 @@ function TheaterSelection() {
       <div className="mx-auto max-w-7xl px-6">
         {/* Header */}
         <div className="mb-10 flex flex-col gap-5 sm:gap-6 lg:flex-row lg:items-center">
-          <img
-            src={
-              movie?.poster
-                ? `http://localhost:5000/${movie.poster.split("/").pop()}`
-                : "https://placehold.co/300x450/111827/FACC15?text=Movie"
-            }
-            alt={movie.title}
-            className="h-44 w-32 self-center rounded-3xl object-cover shadow-2xl sm:h-60 sm:w-40 lg:self-auto"
-          />
+          <div className="h-[360px] w-[240px] overflow-hidden rounded-3xl border border-white/10 bg-[#151A26] shadow-xl">
+            <img
+              src={getPosterUrl(movie.poster)}
+              alt={movie.title}
+              className="h-full w-full object-cover"
+              onError={(e) => {
+                e.currentTarget.src =
+                  "https://placehold.co/400x600/111827/FACC15?text=No+Poster";
+              }}
+            />
+          </div>
 
           <div>
             <span className="rounded-full border border-yellow-400/30 bg-yellow-400/10 px-4 py-2 text-sm tracking-[0.25em] text-yellow-300">
