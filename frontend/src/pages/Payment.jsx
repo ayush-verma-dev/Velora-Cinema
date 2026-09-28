@@ -122,8 +122,7 @@ function Payment() {
             });
 
             const ticket = {
-              ...booking,
-              bookingId: bookingRes.data.booking.bookingId,
+              ...bookingRes.data.booking,     // complete booking from backend
               paymentMethod: method,
               bookedAt: new Date().toLocaleString(),
               paymentId: verifyRes.data.paymentId,

@@ -112,15 +112,6 @@ function Ticket() {
     ticket.bookingInfo?.poster ||
     "";
 
-  <img
-    src={`${BACKEND_URL}/${posterFile.split(/[\\/]/).pop()}`}
-    alt={ticket.movie?.title || ticket.bookingInfo?.movie}
-    onError={(e) => {
-      e.currentTarget.src =
-        "https://placehold.co/400x600/111827/FACC15?text=No+Poster";
-    }}
-  />
-
   const moviePoster = posterFile
     ? `${BACKEND_URL}/${posterFile.split(/[\\/]/).pop()}`
     : null;
@@ -136,7 +127,7 @@ function Ticket() {
 
   const qrData = JSON.stringify({
     bookingId: ticket.bookingId,
-    movie: ticket.movie?.title,
+    movie: ticket.movie?.title || ticket.bookingInfo?.movie,
     theater: ticket.theater?.name,
     seats: ticket.seats,
     showtime:
@@ -163,7 +154,7 @@ function Ticket() {
 
     pdf.addImage(img, "PNG", 10, 10, width, height);
 
-    pdf.save(`${ticket.movie?.title}-ticket.pdf`);
+    pdf.save(`${ticket.movie?.title || ticket.bookingInfo?.movie}-ticket.pdf`);
   }
 
   return (
@@ -219,7 +210,7 @@ function Ticket() {
               {moviePoster && (
                 <img
                   src={moviePoster}
-                  alt={ticket.movie?.title}
+                  alt={ticket.movie?.title || ticket.bookingInfo?.movie}
                   className="h-28 rounded-2xl object-cover"
                 />
               )}
@@ -232,7 +223,7 @@ function Ticket() {
             <div className="grid gap-6 md:grid-cols-2">
               <TicketInfo
                 label="Movie"
-                value={ticket.movie?.title}
+                value={ticket.movie?.title || ticket.bookingInfo?.movie}
               />
 
               <TicketInfo
