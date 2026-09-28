@@ -266,22 +266,17 @@ const handlePayment = async () => {
     }
 
     // Step 2: Create Razorpay order
-    const bookingRes = await API.post(
+    const { data } = await API.post(
       "/bookings/create",
       {
         movieId: movie._id,
         theaterId: theater._id,
         showId: showId,
+        showtime: selectedShow.time, // <-- ADD THIS
         seats: selectedSeats,
         totalPrice,
         paymentId: paymentData.razorpay_payment_id,
       },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
 
     const order = data.order;
     amount: data.order.amount;
@@ -406,6 +401,15 @@ const verifyPayment = async (paymentData) => {
       }
     );
 
+    console.log("Booking payload:", {
+      movieId: movie?._id,
+      theaterId: theater?._id,
+      showId,
+      seats: selectedSeats,
+      totalPrice,
+      paymentId: paymentData.razorpay_payment_id,
+    });
+
     console.log("Create booking response:", response.data);
 
     if (response.data.success) {
@@ -424,8 +428,6 @@ const verifyPayment = async (paymentData) => {
     alert("Payment succeeded but booking creation failed.");
   }
 
-    console.log("Booking Created:", bookingData);
-
     if (!bookingData.success || !bookingData.booking?.bookingId) {
       alert("Booking created but booking ID was not returned.");
       return;
@@ -436,8 +438,6 @@ const verifyPayment = async (paymentData) => {
     await fetchShow();
 
     //await fetchShow();
-
-    console.log("Booking Created:", bookingData);
 
     // Backend must return booking
     if (!bookingData.success || !bookingData.booking || !bookingData.booking.bookingId) {
