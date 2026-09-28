@@ -266,10 +266,15 @@ const handlePayment = async () => {
     }
 
     // Step 2: Create Razorpay order
-    const { data } = await API.post(
-      "/bookings/create-order",
+    const bookingRes = await API.post(
+      "/bookings/create",
       {
-        amount: totalAmount,
+        movieId: movie._id,
+        theaterId: theater._id,
+        showId: showId,
+        seats: selectedSeats,
+        totalPrice,
+        paymentId: paymentData.razorpay_payment_id,
       },
       {
         headers: {
@@ -277,6 +282,12 @@ const handlePayment = async () => {
         },
       }
     );
+
+    const order = data.order;
+    amount: data.order.amount;
+    order_id: data.order.id;
+
+console.log("Create booking response:", bookingRes.data);
 
     // Step 3: Get Razorpay order
     const order = data.order;
@@ -383,7 +394,7 @@ const verifyPayment = async (paymentData) => {
       {
         movieId: movie._id,
         theaterId: theater._id,
-        showId,
+        showId: showId,
         seats: selectedSeats,
         totalPrice,
         paymentId: paymentData.razorpay_payment_id,
@@ -444,10 +455,13 @@ const verifyPayment = async (paymentData) => {
     setTimeout(() => {
       console.log("Redirecting to ticket:", `/ticket/${data.booking.bookingId}`);
 
-      navigate(`/ticket/${bookingData.booking.bookingId}`, {
-        state: bookingData.booking,
-        replace: true,
-      });
+      if (bookingRes.data.success) {
+        navigate(`/ticket/${bookingRes.data.booking.bookingId}`, {
+          state: bookingRes.data.booking,
+        });
+      } else {
+        alert("Booking creation failed.");
+      }
     }, 300);
 
   } catch (error) {
