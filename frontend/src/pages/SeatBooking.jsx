@@ -384,16 +384,30 @@ const verifyPayment = async (paymentData) => {
       paymentMethod: "UPI",
     };
 
-    const { data } = await API.post(
-      "/bookings/create",
-      bookingPayload,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
+    try {
+      console.log("About to create booking");
+
+      const { data } = await API.post(
+        "/bookings/create",
+        {
+          movieId: movie._id,
+          theaterId: theater._id,
+          showId: show._id,
+          seats: selectedSeats,
+          totalPrice,
+          paymentId: paymentData.razorpay_payment_id,
         },
-      }
-    );
-    console.log("Create booking response:", data);
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      console.log("Create booking response:", data);
+    } catch (err) {
+      console.error("Booking creation failed:", err.response?.data || err.message);
+    }
 
     //await fetchShow();
 
