@@ -372,49 +372,64 @@ const verifyPayment = async (paymentData) => {
     }
 
     // Step 2: Create booking only after verification
-    const bookingPayload = {
-      movieId: movie._id,
-      theaterId: theater._id,
-      showId,
-      showtime: `${formattedDate} • ${time}`,
-      seats: selectedSeats,
-      totalPrice: totalPrice,
-      paymentOrderId: paymentData.razorpay_order_id,
-      paymentId: paymentData.razorpay_payment_id,
-      paymentMethod: "UPI",
-    };
+
+    let bookingData;
 
     try {
-      console.log("About to create booking");
+    console.log("About to create booking");
 
-      const { data } = await API.post(
-        "/bookings/create",
-        {
-          movieId: movie._id,
-          theaterId: theater._id,
-          showId: show._id,
-          seats: selectedSeats,
-          totalPrice,
-          paymentId: paymentData.razorpay_payment_id,
+    const response = await API.post(
+      "/bookings/create",
+      {
+        movieId: movie._id,
+        theaterId: theater._id,
+        showId,
+        seats: selectedSeats,
+        totalPrice,
+        paymentId: paymentData.razorpay_payment_id,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      }
+    );
 
-      console.log("Create booking response:", data);
-    } catch (err) {
-      console.error("Booking creation failed:", err.response?.data || err.message);
+    console.log("Create booking response:", response.data);
+
+    if (response.data.success) {
+      navigate(`/ticket/${response.data.booking.bookingId}`, {
+        state: response.data.booking,
+      });
+      return;
     }
+
+    alert("Payment succeeded but booking creation failed.");
+  } catch (err) {
+    console.error(
+      "Booking creation failed:",
+      err.response?.data || err.message
+    );
+    alert("Payment succeeded but booking creation failed.");
+  }
+
+    console.log("Booking Created:", bookingData);
+
+    if (!bookingData.success || !bookingData.booking?.bookingId) {
+      alert("Booking created but booking ID was not returned.");
+      return;
+    }
+
+    setTimerActive(false);
+    setSelectedSeats([]);
+    await fetchShow();
 
     //await fetchShow();
 
-    console.log("Booking Created:", data);
+    console.log("Booking Created:", bookingData);
 
     // Backend must return booking
-    if (!data.success || !data.booking || !data.booking.bookingId) {
+    if (!bookingData.success || !bookingData.booking || !bookingData.booking.bookingId) {
       console.error("Invalid booking response:", data);
       alert("Ticket created but booking ID was not returned.");
       return;
@@ -429,8 +444,8 @@ const verifyPayment = async (paymentData) => {
     setTimeout(() => {
       console.log("Redirecting to ticket:", `/ticket/${data.booking.bookingId}`);
 
-      navigate(`/ticket/${data.booking.bookingId}`, {
-        state: data.booking,
+      navigate(`/ticket/${bookingData.booking.bookingId}`, {
+        state: bookingData.booking,
         replace: true,
       });
     }, 300);
