@@ -392,20 +392,25 @@ const verifyPayment = async (paymentData) => {
 
     console.log("Booking Created:", data);
 
-    await fetchShow();
+    //await fetchShow();
 
-    const ticketId =
-      data.booking?._id ||
-      data.booking?.bookingId ||
-      data.ticket?._id;
+    console.log("Booking Created:", data);
 
-    if (!ticketId) {
+    if (!data.booking) {
       console.error("Backend response:", data);
-      alert("Booking created, but ticket ID was not returned.");
+      alert("Booking created, but ticket data was not returned.");
       return;
     }
 
-    navigate(`/ticket/${ticketId}`);
+    // Stop timer and clear selected seats
+    setTimerActive(false);
+    setSelectedSeats([]);
+
+    // Go directly to generated ticket
+    navigate(`/ticket/${data.booking.bookingId}`, {
+      state: data.booking,
+      replace: true,
+    });
 
   } catch (error) {
     console.error("Verification/Booking Error:", error);
