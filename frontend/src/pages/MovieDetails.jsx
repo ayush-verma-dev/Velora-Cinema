@@ -71,9 +71,9 @@ function MovieDetails() {
     );
   }
 
-  const heroPoster = `${BACKEND_URL}/uploads/posters/${movie.poster
-    ?.split(/[\\/]/)
-    .pop()}`;
+  const heroPoster = movie.poster?.startsWith("http")
+    ? movie.poster
+    : `${BACKEND_URL}/${movie.poster?.split(/[\\/]/).pop()}`;
 
   return (
     <div className="min-h-screen bg-[#0B0F19] text-white">
@@ -245,9 +245,9 @@ function MovieDetails() {
               ? movie.gallery
               : [movie.poster, movie.poster, movie.poster]
             ).map((image, index) => {
-              const galleryUrl = `${BACKEND_URL}/uploads/posters/${image
-                .split(/[\\/]/)
-                .pop()}`;
+              const galleryUrl = image?.startsWith("http")
+                ? image
+                : `${BACKEND_URL}/${image.split(/[\\/]/).pop()}`;
 
               return (
                 <div key={index} className="overflow-hidden rounded-3xl">
