@@ -14,13 +14,21 @@ import SeatExpiredModal from "../components/SeatExpiredModal";
 
 const BACKEND_URL = (
   import.meta.env.VITE_API_URL || "http://localhost:5000/api"
-).replace("/api", "");
+).replace(/\/api\/?$/, "");
 
 function SeatBooking() {
   const navigate = useNavigate();
   const { state } = useLocation();
 
-  const { movie, theater, showId, date, time, price, screen } = state || {};
+  const {
+    movie,
+    theater,
+    showId,
+    date,
+    time,
+    price,
+    screen,
+  } = state || {};
 
   const formattedDate = date
     ? new Date(date).toLocaleDateString("en-IN", {
@@ -65,9 +73,11 @@ function SeatBooking() {
   async function fetchShow() {
     try {
       const { data } = await API.get(`/shows/${showId}`);
-      setBookedSeats(data.show.bookedSeats || []);
+
+      setBookedSeats(data.show?.bookedSeats || []);
+
       setLockedSeats(
-        (data.show.lockedSeats || []).map((lock) => lock.seat)
+        (data.show?.lockedSeats || []).map((lock) => lock.seat)
       );
     } catch (error) {
       console.error("Failed to load seats:", error);
@@ -97,7 +107,9 @@ function SeatBooking() {
     try {
       const token = localStorage.getItem("token");
 
-      if (!token || selectedSeats.length === 0) return;
+      if (!token || selectedSeats.length === 0) {
+        return;
+      }
 
       await API.post(
         "/bookings/unlock-seats",
@@ -119,38 +131,49 @@ function SeatBooking() {
   }
 
   const getSeatType = (seatId) => {
-    return seatRows.find((r) => r.row === seatId[0]).type;
+    const row = seatRows.find((r) => r.row === seatId[0]);
+
+    return row ? row.type : "Normal";
   };
 
   const toggleSeat = (seatId) => {
     if (
       bookedSeats.includes(seatId) ||
       lockedSeats.includes(seatId)
-    )
+    ) {
       return;
+    }
 
     if (selectedSeats.some((seat) => seat.id === seatId)) {
-      const updated = selectedSeats.filter((seat) => seat.id !== seatId);
+      const updatedSeats = selectedSeats.filter(
+        (seat) => seat.id !== seatId
+      );
 
-      setSelectedSeats(updated);
+      setSelectedSeats(updatedSeats);
 
-      if (updated.length === 0) setTimerActive(false);
+      if (updatedSeats.length === 0) {
+        setTimerActive(false);
+      }
 
       return;
     }
 
     const type = getSeatType(seatId);
 
-    setSelectedSeats([
-      ...selectedSeats,
-      {
-        id: seatId,
-        type,
-        price: prices[type],
-      },
+    const newSeat = {
+      id: seatId,
+      type,
+      price: prices[type],
+    };
+
+    setSelectedSeats((prevSeats) => [
+      ...prevSeats,
+      newSeat,
     ]);
 
-    if (!timerActive) setTimerActive(true);
+    if (!timerActive) {
+      setTimerActive(true);
+    }
   };
 
   const handleExpire = async () => {
@@ -160,7 +183,7 @@ function SeatBooking() {
     setTimerActive(false);
     setExpired(true);
 
-    fetchShow();
+    await fetchShow();
   };
 
   const totalPrice = selectedSeats.reduce(
@@ -168,70 +191,33 @@ function SeatBooking() {
     0
   );
 
-  /*const continueBooking = () => {
-    if (!selectedSeats.length) return;
-
-    const bookingData = {
-      bookingInfo: {
-        movie: movie.title,
-        movieId: movie._id,
-        poster: movie.poster,
-
-        theater: theater.name,
-        theaterId: theater._id,
-
-        showId, // Required for backend booking
-
-        showtime: `${date} • ${time}`,
-        date,
-        time,
-        screen,
-        experience: screen || theater.experience,
-      },
-
-      seats: selectedSeats,
-      price,
-      totalPrice,
-    };
-
-    // Save for refresh support
-    localStorage.setItem("veloraBooking", JSON.stringify(bookingData));
-
-    // Scroll to top before navigation
-    window.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: "auto",
-    });
-
-    // Go to payment page
-    navigate("/payment", {
-      state: bookingData,
-    });
-  };*/
-
   const seatColor = (seatId) => {
-    if (bookedSeats.includes(seatId))
+    if (bookedSeats.includes(seatId)) {
       return "bg-red-500 text-white cursor-not-allowed";
+    }
 
-    if (lockedSeats.includes(seatId))
+    if (lockedSeats.includes(seatId)) {
       return "bg-orange-500 text-white cursor-not-allowed";
+    }
 
-    if (selectedSeats.some((seat) => seat.id === seatId))
+    if (selectedSeats.some((seat) => seat.id === seatId)) {
       return "bg-yellow-400 text-black";
+    }
 
     const type = getSeatType(seatId);
 
-    if (type === "VIP")
+    if (type === "VIP") {
       return "bg-purple-500/20 border border-purple-400 text-purple-300 hover:bg-purple-500/30";
+    }
 
-    if (type === "Premium")
+    if (type === "Premium") {
       return "bg-blue-500/20 border border-blue-400 text-blue-300 hover:bg-blue-500/30";
+    }
 
     return "bg-white/5 border border-white/10 text-gray-300 hover:border-yellow-400 hover:text-yellow-300";
   };
 
-  // ==========================
+// ==========================
 // Razorpay Payment
 // ==========================
 
@@ -239,14 +225,38 @@ const handlePayment = async () => {
   try {
     const token = localStorage.getItem("token");
 
-    const totalAmount = totalPrice;
+    if (!token) {
+      alert("Please login to continue.");
+      navigate("/login");
+      return;
+    }
 
     if (selectedSeats.length === 0) {
       alert("Please select at least one seat.");
       return;
     }
 
-    // Step 1: Lock selected seats for 5 minutes
+    if (!movie?._id || !theater?._id || !showId || !time) {
+      console.error("Missing booking details:", {
+        movieId: movie?._id,
+        theaterId: theater?._id,
+        showId,
+        time,
+      });
+
+      alert("Booking details are incomplete. Please select the show again.");
+      return;
+    }
+
+    if (!window.Razorpay) {
+      alert("Razorpay failed to load. Please refresh the page and try again.");
+      return;
+    }
+
+    // ==========================================
+    // STEP 1: Lock selected seats
+    // ==========================================
+
     const lockResponse = await API.post(
       "/bookings/lock-seats",
       {
@@ -260,27 +270,25 @@ const handlePayment = async () => {
       }
     );
 
-    if (!lockResponse.data.success) {
-      alert(lockResponse.data.message || "Unable to lock seats.");
+    console.log("Lock seats response:", lockResponse.data);
+
+    if (!lockResponse.data?.success) {
+      alert(
+        lockResponse.data?.message ||
+          "Unable to lock selected seats."
+      );
       return;
     }
 
-    // Step 2: Create Razorpay order
-    const payload = {
-      movieId: movie?._id,
-      theaterId: theater?._id,
-      showId,
-      showtime: selectedShow?.time,
-      seats: selectedSeats,
-      totalPrice,
-      paymentId: paymentData.razorpay_payment_id,
-    };
+    // ==========================================
+    // STEP 2: Create Razorpay order
+    // ==========================================
 
-    console.log("Booking payload:", payload);
-
-    const { data } = await API.post(
-      "/bookings/create",
-      payload,
+    const orderResponse = await API.post(
+      "/bookings/create-order",
+      {
+        amount: totalPrice,
+      },
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -288,30 +296,51 @@ const handlePayment = async () => {
       }
     );
 
-    const order = data.order;
-    amount: data.order.amount;
-    order_id: data.order.id;
+    console.log("Create Razorpay order response:", orderResponse.data);
 
-console.log("Create booking response:", bookingRes.data);
+    if (!orderResponse.data?.success || !orderResponse.data?.order) {
+      await releaseSeats();
 
-    // Step 3: Get Razorpay order
-    const order = data.order;
+      alert(
+        orderResponse.data?.message ||
+          "Unable to create payment order."
+      );
+
+      return;
+    }
+
+    const order = orderResponse.data.order;
+
+    // ==========================================
+    // STEP 3: Open Razorpay checkout
+    // ==========================================
+
+    const user = JSON.parse(
+      localStorage.getItem("user") || "{}"
+    );
 
     const options = {
       key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-      amount: data.order.amount,
-      currency: data.order.currency,
+
+      amount: order.amount,
+
+      currency: order.currency || "INR",
+
       name: "Velora Cinema",
+
       description: `${movie.title} Movie Tickets`,
-      order_id: data.order.id,
+
+      order_id: order.id,
 
       handler: async function (response) {
+        console.log("Razorpay payment successful:", response);
+
         await verifyPayment(response);
       },
 
       prefill: {
-        name: JSON.parse(localStorage.getItem("user"))?.name || "",
-        email: JSON.parse(localStorage.getItem("user"))?.email || "",
+        name: user?.name || "",
+        email: user?.email || "",
       },
 
       theme: {
@@ -320,7 +349,7 @@ console.log("Create booking response:", bookingRes.data);
 
       modal: {
         ondismiss: async () => {
-          console.log("Payment cancelled.");
+          console.log("Payment cancelled by user.");
 
           await releaseSeats();
 
@@ -333,25 +362,52 @@ console.log("Create booking response:", bookingRes.data);
 
     const razorpay = new window.Razorpay(options);
 
-    razorpay.on("payment.failed", async function (response) {
-      console.error("Payment Failed:", response.error);
+    // ==========================================
+    // STEP 4: Handle payment failure
+    // ==========================================
+
+    razorpay.on("payment.failed", async (response) => {
+      console.error("Razorpay Payment Failed:", response.error);
 
       await releaseSeats();
 
       setSelectedSeats([]);
       setTimerActive(false);
+      setExpired(false);
 
       alert(
-        `Payment Failed\n\nReason: ${response.error.description}`
+        `Payment Failed\n\nReason: ${
+          response.error?.description || "Unknown error"
+        }`
       );
     });
+
+    // ==========================================
+    // STEP 5: Open Razorpay
+    // ==========================================
 
     razorpay.open();
   } catch (error) {
     console.error("Payment Error:", error);
-    console.log("Response:", error.response);
+    console.error(
+      "Payment Error Response:",
+      error.response?.data
+    );
 
-    alert(error.response?.data?.message || "Unable to start payment.");
+    // Try to release seats if something failed
+    try {
+      await releaseSeats();
+    } catch (releaseError) {
+      console.error(
+        "Failed to release seats after payment error:",
+        releaseError
+      );
+    }
+
+    alert(
+      error.response?.data?.message ||
+        "Unable to start payment. Please try again."
+    );
   }
 };
 
@@ -361,11 +417,59 @@ console.log("Create booking response:", bookingRes.data);
 
 const verifyPayment = async (paymentData) => {
   try {
+    console.log("=================================");
     console.log("verifyPayment started");
+    console.log("Payment Data:", paymentData);
+    console.log("=================================");
 
     const token = localStorage.getItem("token");
 
-    // Step 1: Verify payment signature with backend
+    if (!token) {
+      alert("Session expired. Please login again.");
+      navigate("/login");
+      return;
+    }
+
+    if (
+      !paymentData?.razorpay_order_id ||
+      !paymentData?.razorpay_payment_id ||
+      !paymentData?.razorpay_signature
+    ) {
+      console.error(
+        "Invalid Razorpay payment data:",
+        paymentData
+      );
+
+      alert("Invalid payment information received.");
+      return;
+    }
+
+    if (
+      !movie?._id ||
+      !theater?._id ||
+      !showId ||
+      !time ||
+      selectedSeats.length === 0
+    ) {
+      console.error("Missing booking information:", {
+        movieId: movie?._id,
+        theaterId: theater?._id,
+        showId,
+        time,
+        selectedSeats,
+      });
+
+      alert(
+        "Payment succeeded, but booking information is incomplete."
+      );
+
+      return;
+    }
+
+    // ==========================================
+    // STEP 1: Verify Razorpay payment
+    // ==========================================
+
     const verifyRes = await API.post(
       "/bookings/verify-payment",
       {
@@ -380,30 +484,51 @@ const verifyPayment = async (paymentData) => {
       }
     );
 
-    console.log("Verification response:", verifyRes.data);
+    console.log(
+      "Payment verification response:",
+      verifyRes.data
+    );
 
-    if (!verifyRes.data.success) {
-      alert("Payment verification failed.");
+    if (!verifyRes.data?.success) {
+      console.error(
+        "Payment verification failed:",
+        verifyRes.data
+      );
+
+      alert(
+        verifyRes.data?.message ||
+          "Payment verification failed."
+      );
+
       return;
     }
 
-    // Step 2: Create booking only after verification
+    console.log("Payment verified successfully.");
 
-    let bookingData;
+    // ==========================================
+    // STEP 2: Create confirmed booking
+    // ==========================================
 
-    try {
-    console.log("About to create booking");
+    const bookingPayload = {
+      movieId: movie._id,
+      theaterId: theater._id,
+      showId: showId,
+      showtime: time,
+      seats: selectedSeats,
+      totalPrice: totalPrice,
+      paymentOrderId: paymentData.razorpay_order_id,
+      paymentId: paymentData.razorpay_payment_id,
+      paymentMethod: "Razorpay",
+    };
 
-    const response = await API.post(
+    console.log(
+      "Creating booking with payload:",
+      bookingPayload
+    );
+
+    const bookingResponse = await API.post(
       "/bookings/create",
-      {
-        movieId: movie._id,
-        theaterId: theater._id,
-        showId: showId,
-        seats: selectedSeats,
-        totalPrice,
-        paymentId: paymentData.razorpay_payment_id,
-      },
+      bookingPayload,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -411,79 +536,93 @@ const verifyPayment = async (paymentData) => {
       }
     );
 
-    console.log("Booking payload:", {
-      movieId: movie?._id,
-      theaterId: theater?._id,
-      showId,
-      seats: selectedSeats,
-      totalPrice,
-      paymentId: paymentData.razorpay_payment_id,
-    });
-
-    console.log("Create booking response:", response.data);
-
-    if (response.data.success) {
-      navigate(`/ticket/${response.data.booking.bookingId}`, {
-        state: response.data.booking,
-      });
-      return;
-    }
-
-    alert("Payment succeeded but booking creation failed.");
-  } catch (err) {
-    console.error(
-      "Booking creation failed:",
-      err.response?.data || err.message
+    console.log(
+      "Create booking response:",
+      bookingResponse.data
     );
-    alert("Payment succeeded but booking creation failed.");
-  }
 
-    if (!bookingData.success || !bookingData.booking?.bookingId) {
-      alert("Booking created but booking ID was not returned.");
+    // ==========================================
+    // STEP 3: Validate booking response
+    // ==========================================
+
+    if (
+      !bookingResponse.data?.success ||
+      !bookingResponse.data?.booking
+    ) {
+      console.error(
+        "Booking creation failed:",
+        bookingResponse.data
+      );
+
+      alert(
+        bookingResponse.data?.message ||
+          "Payment succeeded but booking creation failed."
+      );
+
       return;
     }
 
-    setTimerActive(false);
-    setSelectedSeats([]);
-    await fetchShow();
+    const booking = bookingResponse.data.booking;
 
-    //await fetchShow();
+    if (!booking.bookingId) {
+      console.error(
+        "Booking created but bookingId is missing:",
+        booking
+      );
 
-    // Backend must return booking
-    if (!bookingData.success || !bookingData.booking || !bookingData.booking.bookingId) {
-      console.error("Invalid booking response:", data);
-      alert("Ticket created but booking ID was not returned.");
+      alert(
+        "Booking was created but ticket information is missing."
+      );
+
       return;
     }
 
-    // Stop timer
+    console.log("Booking created successfully:", booking);
+
+    // ==========================================
+    // STEP 4: Stop seat timer and refresh seats
+    // ==========================================
+
     setTimerActive(false);
     setSelectedSeats([]);
+    setExpired(false);
+
     await fetchShow();
 
-    // Give Razorpay modal a moment to close
-    setTimeout(() => {
-      console.log("Redirecting to ticket:", `/ticket/${data.booking.bookingId}`);
+    // ==========================================
+    // STEP 5: Navigate to ticket page
+    // ==========================================
 
-      if (bookingRes.data.success) {
-        navigate(`/ticket/${bookingRes.data.booking.bookingId}`, {
-          state: bookingRes.data.booking,
-        });
-      } else {
-        alert("Booking creation failed.");
-      }
-    }, 300);
+    console.log(
+      "Redirecting to ticket:",
+      `/ticket/${booking.bookingId}`
+    );
 
+    navigate(`/ticket/${booking.bookingId}`, {
+      state: booking,
+    });
   } catch (error) {
-    console.error("Verification/Booking Error:", error);
+    console.error(
+      "Verification/Booking Error:",
+      error
+    );
 
-    alert("Payment succeeded but booking creation failed.");
+    console.error(
+      "Backend Error Response:",
+      error.response?.data
+    );
+
+    alert(
+      error.response?.data?.message ||
+        "Payment succeeded but booking creation failed. Please check My Tickets."
+    );
   }
 };
 
   return (
     <div className="min-h-screen bg-[#0B0F19] py-10 text-white">
       <div className="mx-auto max-w-7xl px-6">
+
         {/* Back Button */}
         <button
           onClick={() => navigate(-1)}
@@ -495,13 +634,16 @@ const verifyPayment = async (paymentData) => {
 
         {/* Header */}
         <div className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-center">
+
           <img
             src={
               movie?.poster
-                ? `${BACKEND_URL}/${movie.poster.split(/[\\/]/).pop()}`
+                ? `${BACKEND_URL}/${movie.poster
+                    .split(/[\\/]/)
+                    .pop()}`
                 : "https://placehold.co/300x450/111827/FACC15?text=Movie"
             }
-            alt={movie.title}
+            alt={movie?.title || "Movie"}
             className="h-56 w-40 rounded-2xl object-cover shadow-xl"
             onError={(e) => {
               e.currentTarget.src =
@@ -510,27 +652,29 @@ const verifyPayment = async (paymentData) => {
           />
 
           <div className="flex-1">
-            <h1 className="text-4xl font-bold">{movie.title}</h1>
+            <h1 className="text-4xl font-bold">
+              {movie?.title || "Movie"}
+            </h1>
 
             <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-400">
-              <span>{movie.genre}</span>
+              <span>{movie?.genre || "N/A"}</span>
               <span>•</span>
-              <span>{movie.duration}</span>
+              <span>{movie?.duration || "N/A"}</span>
               <span>•</span>
-              <span>{movie.language}</span>
+              <span>{movie?.language || "N/A"}</span>
               <span>•</span>
-              <span>{movie.format}</span>
+              <span>{movie?.format || "N/A"}</span>
             </div>
 
             <div className="mt-4 flex flex-wrap gap-6 text-gray-400">
               <span className="flex items-center gap-2">
                 <FaMapMarkerAlt className="text-yellow-400" />
-                {theater.name}
+                {theater?.name || "Theater"}
               </span>
 
               <span className="flex items-center gap-2">
                 <FaClock className="text-yellow-400" />
-                {formattedDate} • {time}
+                {formattedDate} • {time || "N/A"}
               </span>
             </div>
           </div>
@@ -544,26 +688,56 @@ const verifyPayment = async (paymentData) => {
         />
 
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+
           {/* Seat Map */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="rounded-3xl border border-white/10 bg-[#151A26] p-3 sm:p-6"
           >
+
             {/* Legend */}
             <div className="mb-8 flex flex-wrap justify-center gap-6 text-sm">
-              <Legend color="bg-purple-500/30 border border-purple-400" label="VIP" />
-              <Legend color="bg-blue-500/30 border border-blue-400" label="Premium" />
-              <Legend color="bg-white/10 border border-white/20" label="Normal" />
-              <Legend color="bg-yellow-400" label="Selected" />
-              <Legend color="bg-red-500" label="Booked" />
+              <Legend
+                color="bg-purple-500/30 border border-purple-400"
+                label="VIP"
+              />
+
+              <Legend
+                color="bg-blue-500/30 border border-blue-400"
+                label="Premium"
+              />
+
+              <Legend
+                color="bg-white/10 border border-white/20"
+                label="Normal"
+              />
+
+              <Legend
+                color="bg-yellow-400"
+                label="Selected"
+              />
+
+              <Legend
+                color="bg-red-500"
+                label="Booked"
+              />
+
+              <Legend
+                color="bg-orange-500"
+                label="Locked"
+              />
             </div>
 
+            {/* Seats */}
             <div className="space-y-6">
               {seatRows.map((row) => (
                 <div key={row.row}>
-                  {(row.row === "A" || row.row === "B" || row.row === "E") && (
-                    <div className="mb-5 mt-7 text-center text-sm sm:text-base font-semibold tracking-[0.3em] text-gray-300">
+
+                  {(row.row === "A" ||
+                    row.row === "B" ||
+                    row.row === "E") && (
+                    <div className="mb-5 mt-7 text-center text-sm font-semibold tracking-[0.3em] text-gray-300 sm:text-base">
                       {row.row === "A"
                         ? "VIP SECTION"
                         : row.row === "B"
@@ -573,23 +747,41 @@ const verifyPayment = async (paymentData) => {
                   )}
 
                   <div className="flex items-center justify-center gap-1.5 sm:gap-3">
-                    <span className="w-6 sm:w-8 text-center text-sm sm:text-base font-bold text-yellow-300">
+
+                    <span className="w-6 text-center text-sm font-bold text-yellow-300 sm:w-8 sm:text-base">
                       {row.row}
                     </span>
 
-                    {Array.from({ length: row.seats }).map((_, index) => {
+                    {Array.from({
+                      length: row.seats,
+                    }).map((_, index) => {
                       const seatId = `${row.row}${index + 1}`;
+
+                      const isBooked =
+                        bookedSeats.includes(seatId);
+
+                      const isLocked =
+                        lockedSeats.includes(seatId);
+
+                      const isSelected =
+                        selectedSeats.some(
+                          (seat) => seat.id === seatId
+                        );
 
                       return (
                         <button
                           key={seatId}
-                          onClick={() => toggleSeat(seatId)}
+                          type="button"
+                          onClick={() =>
+                            toggleSeat(seatId)
+                          }
                           disabled={
-                            bookedSeats.includes(seatId) ||
-                            lockedSeats.includes(seatId) ||
+                            isBooked ||
+                            isLocked ||
                             loadingSeats
                           }
-                          className={`flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl text-[11px] sm:text-xs font-semibold transition ${seatColor(
+                          aria-label={`Seat ${seatId}`}
+                          className={`flex h-9 w-9 items-center justify-center rounded-xl text-[11px] font-semibold transition sm:h-10 sm:w-10 sm:text-xs ${seatColor(
                             seatId
                           )}`}
                         >
@@ -618,17 +810,21 @@ const verifyPayment = async (paymentData) => {
           <motion.div
             initial={{ opacity: 0, x: 25 }}
             animate={{ opacity: 1, x: 0 }}
-            className="lg:sticky lg:top-28 h-fit rounded-3xl border border-yellow-400/20 bg-[#151A26] p-4 sm:p-6"
+            className="h-fit rounded-3xl border border-yellow-400/20 bg-[#151A26] p-4 sm:p-6 lg:sticky lg:top-28"
           >
-            <h2 className="text-2xl font-bold">Booking Summary</h2>
+            <h2 className="text-2xl font-bold">
+              Booking Summary
+            </h2>
 
             <img
               src={
                 movie?.poster
-                  ? `${BACKEND_URL}/${movie.poster.split(/[\\/]/).pop()}`
+                  ? `${BACKEND_URL}/${movie.poster
+                      .split(/[\\/]/)
+                      .pop()}`
                   : "https://placehold.co/300x450/111827/FACC15?text=Movie"
               }
-              alt={movie.title}
+              alt={movie?.title || "Movie"}
               className="mt-6 h-40 w-full rounded-xl object-cover"
               onError={(e) => {
                 e.currentTarget.src =
@@ -637,24 +833,36 @@ const verifyPayment = async (paymentData) => {
             />
 
             <div className="mt-6 space-y-4">
-              <SummaryRow label="Movie" value={movie.title} />
-              <SummaryRow label="Theater" value={theater.name} />
+
+              <SummaryRow
+                label="Movie"
+                value={movie?.title || "N/A"}
+              />
+
+              <SummaryRow
+                label="Theater"
+                value={theater?.name || "N/A"}
+              />
+
               <SummaryRow
                 label="Showtime"
                 value={
                   <>
-                    {date}
+                    {date || "N/A"}
                     <br />
-                    {time}
+                    {time || "N/A"}
                   </>
                 }
                 stacked
               />
+
               <SummaryRow
                 label="Seats"
                 value={
                   selectedSeats.length
-                    ? selectedSeats.map((seat) => seat.id).join(", ")
+                    ? selectedSeats
+                        .map((seat) => seat.id)
+                        .join(", ")
                     : "None"
                 }
               />
@@ -668,15 +876,26 @@ const verifyPayment = async (paymentData) => {
               bold
             />
 
+            {/* Payment Button */}
             <motion.button
+              type="button"
               whileHover={{
-                scale: selectedSeats.length && !loadingSeats ? 1.02 : 1,
+                scale:
+                  selectedSeats.length && !loadingSeats
+                    ? 1.02
+                    : 1,
               }}
               whileTap={{
-                scale: selectedSeats.length && !loadingSeats ? 0.98 : 1,
+                scale:
+                  selectedSeats.length && !loadingSeats
+                    ? 0.98
+                    : 1,
               }}
               onClick={handlePayment}
-              disabled={!selectedSeats.length || loadingSeats}
+              disabled={
+                !selectedSeats.length ||
+                loadingSeats
+              }
               className={`mt-8 flex w-full items-center justify-center gap-2 rounded-full py-4 text-lg font-semibold transition ${
                 selectedSeats.length && !loadingSeats
                   ? "bg-yellow-400 text-black hover:bg-yellow-300"
@@ -684,11 +903,15 @@ const verifyPayment = async (paymentData) => {
               }`}
             >
               <FaTicketAlt />
-              Continue to Payment
+
+              {loadingSeats
+                ? "Loading Seats..."
+                : "Continue to Payment"}
             </motion.button>
           </motion.div>
         </div>
 
+        {/* Expired Seat Modal */}
         <SeatExpiredModal
           open={expired}
           onClose={() => setExpired(false)}
@@ -738,5 +961,6 @@ function SummaryRow({ label, value, bold, stacked = false }) {
     </div>
   );
 }
+
 
 export default SeatBooking;
