@@ -224,17 +224,17 @@ export const generateShows = async (req, res) => {
           const date = new Date(today);
           date.setDate(today.getDate() + i);
 
-          for (const time of times) {
+          times.forEach((time, index) => {
             showDocs.push({
               movie: movie._id,
               theater: theater._id,
               date,
               time,
-              price: 250,
+              price: 250 + index * 50,
               totalSeats: 120,
               bookedSeats: [],
             });
-          }
+          });
         }
       }
     }
