@@ -254,3 +254,81 @@ export const generateShows = async (req, res) => {
     });
   }
 };
+
+// Migrate existing show prices based on movie.showtimes order
+export const migrateShowPrices = async (req, res) => {
+  try {
+    const movies = await Movie.find();
+
+    let updated = 0;
+    let skipped = 0;
+
+    const normalizeTime = (value = "") =>
+      value
+        .replace(/\s+/g, " ")
+        .replace(/\s*:\s*/g, ":")
+        .trim()
+        .toLowerCase();
+
+    for (const movie of movies) {
+      if (!movie.showtimes || movie.showtimes.length === 0) {
+        continue;
+      }
+
+      // First show = ₹250
+      // Second show = ₹300
+      // Third show = ₹350
+      // Fourth show = ₹400
+      const priceByTime = new Map(
+        movie.showtimes.map((time, index) => [
+          normalizeTime(time),
+          250 + index * 50,
+        ])
+      );
+
+      const shows = await Show.find({
+        movie: movie._id,
+      });
+
+      const operations = [];
+
+      for (const show of shows) {
+        const price = priceByTime.get(normalizeTime(show.time));
+
+        if (price === undefined) {
+          skipped++;
+          continue;
+        }
+
+        operations.push({
+          updateOne: {
+            filter: { _id: show._id },
+            update: {
+              $set: { price },
+            },
+          },
+        });
+      }
+
+      if (operations.length > 0) {
+        await Show.bulkWrite(operations);
+        updated += operations.length;
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Show prices migrated successfully",
+      updated,
+      skipped,
+    });
+  } catch (error) {
+    console.error("Price migration error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to migrate show prices",
+      error: error.message,
+    });
+  }
+};

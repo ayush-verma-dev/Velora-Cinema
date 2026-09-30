@@ -7,6 +7,7 @@ import {
   getShowsByMovie,
   getShowById,
   generateShows,
+  migrateShowPrices,
 } from "../controllers/showController.js";
 
 import { protect } from "../middleware/authMiddleware.js";
@@ -22,7 +23,10 @@ router.get("/:id", getShowById);
 // Admin
 router.post("/", protect, adminOnly, createShow);
 router.post("/generate", protect, adminOnly, generateShows);
+router.post("/migrate-prices", protect, adminOnly, migrateShowPrices);
+
 router.put("/:id", protect, adminOnly, updateShow);
+
 router.delete("/:id", protect, adminOnly, deleteShow);
 
 export default router;
