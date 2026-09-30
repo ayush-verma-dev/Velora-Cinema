@@ -13,7 +13,7 @@ import {
 
 const BACKEND_URL = (
   import.meta.env.VITE_API_URL || "http://localhost:5000/api"
-).replace("/api", "");
+).replace(/\/api\/?$/, "");
 
 function Ticket() {
   const navigate = useNavigate();
@@ -26,14 +26,40 @@ function Ticket() {
 
   useEffect(() => {
     async function loadTicket() {
-      // 1. Ticket passed directly from Payment.jsx
+      // ==========================================
+      // 1. Show booking immediately
+      // ==========================================
       if (location.state) {
         setTicket(location.state);
         setLoading(false);
+
+        // Fetch populated booking in background
+        // to get movie poster and other populated data.
+        try {
+          const { data } = await API.get("/bookings/my");
+
+          if (data.success) {
+            const found = data.bookings.find(
+              (b) => b.bookingId === bookingId
+            );
+
+            if (found) {
+              setTicket(found);
+            }
+          }
+        } catch (error) {
+          console.error(
+            "Failed to refresh ticket details:",
+            error
+          );
+        }
+
         return;
       }
 
+      // ==========================================
       // 2. Check localStorage
+      // ==========================================
       const localTickets =
         JSON.parse(localStorage.getItem("veloraTickets")) || [];
 
@@ -47,7 +73,9 @@ function Ticket() {
         return;
       }
 
+      // ==========================================
       // 3. Fetch from backend
+      // ==========================================
       try {
         const { data } = await API.get("/bookings/my");
 
@@ -112,11 +140,25 @@ function Ticket() {
     ticket.bookingInfo?.poster ||
     "";
 
-  const moviePoster = posterFile
-    ? posterFile.startsWith("http")
-      ? posterFile
-      : `${BACKEND_URL}/uploads/${posterFile.split(/[\\/]/).pop()}`
-    : "https://placehold.co/300x450/111827/FACC15?text=No+Poster";
+  const moviePoster = (() => {
+    if (!posterFile) {
+      return "https://placehold.co/300x450/111827/FACC15?text=No+Poster";
+    }
+
+    if (
+      posterFile.startsWith("http://") ||
+      posterFile.startsWith("https://")
+    ) {
+      return posterFile;
+    }
+
+    const fileName = posterFile
+      .replace(/\\/g, "/")
+      .split("/")
+      .pop();
+
+    return `${BACKEND_URL}/${fileName}`;
+  })();
 
   const formattedShowDate = ticket.show?.date
     ? new Date(ticket.show.date).toLocaleDateString("en-IN", {
@@ -209,17 +251,17 @@ function Ticket() {
                 </h2>
               </div>
 
-              {moviePoster && (
-                <img
-                  src={moviePoster}
-                  alt={ticket.movie?.title || ticket.bookingInfo?.movie}
-                  className="h-28 rounded-2xl object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src =
-                      "https://placehold.co/300x450/111827/FACC15?text=No+Poster";
-                  }}
-                />
-              )}
+              <img
+                src={moviePoster}
+                alt={ticket.movie?.title || ticket.bookingInfo?.movie || "Movie Poster"}
+                className="h-28 w-20 rounded-2xl object-cover"
+                loading="eager"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src =
+                    "https://placehold.co/300x450/111827/FACC15?text=No+Poster";
+                }}
+              />
             </div>
 
             <div className="my-8 border-t border-dashed border-yellow-400/20"></div>
