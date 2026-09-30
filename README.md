@@ -142,7 +142,7 @@ Velora Cinema/
 ### Clone Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/velora-cinema.git
+git clone https://github.com/ayyush-gif/velora-cinema.git
 cd velora-cinema
 ```
 
@@ -291,7 +291,7 @@ Electronics & Communication Engineering Student
 
 Aspiring Full Stack Developer | DSA | Data Science Enthusiast
 
-GitHub: https://github.com/YOUR_USERNAME
+GitHub: https://github.com/ayyush-gif
 
 ---
 
