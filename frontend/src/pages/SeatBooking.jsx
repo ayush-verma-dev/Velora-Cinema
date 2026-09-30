@@ -165,7 +165,7 @@ function SeatBooking() {
       type,
       price: prices[type],
     };
-
+    
     setSelectedSeats((prevSeats) => [
       ...prevSeats,
       newSeat,
