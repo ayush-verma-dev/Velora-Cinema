@@ -31,27 +31,68 @@ export const createBooking = async (req, res) => {
       paymentMethod,
     } = req.body;
 
-    // Validate required fields
+    // ==========================================
+    // Validate required booking fields
+    // ==========================================
+
     if (
       !movieId ||
       !theaterId ||
       !showId ||
-      !showtime ||
       !seats?.length ||
-      !totalPrice
+      totalPrice === undefined ||
+      totalPrice === null
     ) {
+      console.error("Missing booking fields:", {
+        movieId,
+        theaterId,
+        showId,
+        showtime,
+        seats,
+        totalPrice,
+        paymentOrderId,
+        paymentId,
+        paymentMethod,
+      });
+
       return res.status(400).json({
         success: false,
         message: "All booking details are required.",
+        missing: {
+          movieId: !movieId,
+          theaterId: !theaterId,
+          showId: !showId,
+          seats: !seats?.length,
+          totalPrice:
+            totalPrice === undefined ||
+            totalPrice === null,
+        },
       });
     }
 
-    // Convert seat objects -> string array
-    const seatIds = seats.map((seat) =>
-      typeof seat === "string" ? seat : seat.id
-    );
+    // ==========================================
+    // Convert seat objects -> seat IDs
+    // ==========================================
 
+    const seatIds = seats
+      .map((seat) =>
+        typeof seat === "string"
+          ? seat
+          : seat?.id
+      )
+      .filter(Boolean);
+
+    if (seatIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No valid seats were provided.",
+      });
+    }
+
+    // ==========================================
     // Verify movie
+    // ==========================================
+
     const movie = await Movie.findById(movieId);
 
     if (!movie) {
@@ -61,7 +102,10 @@ export const createBooking = async (req, res) => {
       });
     }
 
+    // ==========================================
     // Verify theater
+    // ==========================================
+
     const theater = await Theater.findById(theaterId);
 
     if (!theater) {
@@ -71,13 +115,37 @@ export const createBooking = async (req, res) => {
       });
     }
 
+    // ==========================================
     // Verify show
+    // ==========================================
+
     const show = await Show.findById(showId);
 
     if (!show) {
       return res.status(404).json({
         success: false,
         message: "Show not found.",
+      });
+    }
+
+    // ==========================================
+    // Get showtime
+    // Frontend value first,
+    // database show.time as fallback
+    // ==========================================
+
+    const finalShowtime = showtime || show.time;
+
+    if (!finalShowtime) {
+      console.error("Showtime missing:", {
+        receivedShowtime: showtime,
+        showTimeFromDatabase: show.time,
+        showId,
+      });
+
+      return res.status(400).json({
+        success: false,
+        message: "Showtime is missing for this booking.",
       });
     }
 
@@ -99,7 +167,7 @@ export const createBooking = async (req, res) => {
       movie: movieId,
       theater: theaterId,
       show: showId,
-      showtime,
+      showtime: finalShowtime,
       seats: seatIds,
       totalPrice,
 
@@ -110,7 +178,7 @@ export const createBooking = async (req, res) => {
       paymentMethod,
 
       paymentStatus: "paid",
-      status: "confirmed", // ← ADD THIS
+      status: "confirmed",
     });
 
     // Reserve seats permanently
