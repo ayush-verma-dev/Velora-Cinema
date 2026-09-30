@@ -206,45 +206,49 @@ export const createBooking = async (req, res) => {
     console.log("Booking created successfully.");
 
     // ================= SEND EMAIL =================
-    try {
-      const qrData = JSON.stringify({
-        bookingId: booking.bookingId,
-        movie: movie.title,
-        theater: theater.name,
-        showtime: booking.showtime,
-        seats: booking.seats,
-        totalPrice: booking.totalPrice,
-      });
+    // Send confirmation email in the background.
+    // DO NOT wait for email before returning the booking response.
 
-      const qrCode = await QRCode.toDataURL(qrData);
-
-      await sendEmail({
-        to: req.user.email,
-        subject: `🎬 Velora Cinema - Booking Confirmed (${booking.bookingId})`,
-        html: ticketEmail({
-          customerName: req.user.name,
+    Promise.resolve().then(async () => {
+      try {
+        const qrData = JSON.stringify({
           bookingId: booking.bookingId,
           movie: movie.title,
           theater: theater.name,
           showtime: booking.showtime,
-          date: new Date(booking.createdAt).toLocaleDateString("en-IN"),
           seats: booking.seats,
           totalPrice: booking.totalPrice,
-        }),
-        attachments: [
-          {
-            filename: "ticket-qr.png",
-            path: qrCode,
-            cid: "ticketQR",
-          },
-        ],
-      });
+        });
 
-      console.log("Confirmation email sent.");
-    } catch (emailError) {
-      console.error("Email sending failed:", emailError);
-      // Don't fail booking if email fails
-    }
+        const qrCode = await QRCode.toDataURL(qrData);
+
+        await sendEmail({
+          to: req.user.email,
+          subject: `🎬 Velora Cinema - Booking Confirmed (${booking.bookingId})`,
+          html: ticketEmail({
+            customerName: req.user.name,
+            bookingId: booking.bookingId,
+            movie: movie.title,
+            theater: theater.name,
+            showtime: booking.showtime,
+            date: new Date(booking.createdAt).toLocaleDateString("en-IN"),
+            seats: booking.seats,
+            totalPrice: booking.totalPrice,
+          }),
+          attachments: [
+            {
+              filename: "ticket-qr.png",
+              path: qrCode,
+              cid: "ticketQR",
+            },
+          ],
+        });
+
+        console.log("Confirmation email sent.");
+      } catch (emailError) {
+        console.error("Email sending failed:", emailError);
+      }
+    });
 
     return res.status(201).json({
       success: true,
