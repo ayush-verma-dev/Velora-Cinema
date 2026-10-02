@@ -185,22 +185,100 @@ function Ticket() {
   });
 
   async function downloadPDF() {
-    const canvas = await html2canvas(ticketRef.current, {
-      scale: 2,
-    });
+    try {
+      const ticketElement = ticketRef.current;
 
-    const img = canvas.toDataURL("image/png");
+      if (!ticketElement) {
+        alert("Ticket is not ready.");
+        return;
+      }
 
-    const pdf = new jsPDF("portrait", "mm", "a4");
+      // Wait for images, especially the movie poster
+      const images = Array.from(
+        ticketElement.querySelectorAll("img")
+      );
 
-    const width = 190;
-    const height = (canvas.height * width) / canvas.width;
+      await Promise.all(
+        images.map((img) => {
+          if (img.complete) {
+            return Promise.resolve();
+          }
 
-    pdf.addImage(img, "PNG", 10, 10, width, height);
+          return new Promise((resolve) => {
+            img.onload = resolve;
+            img.onerror = resolve;
+          });
+        })
+      );
 
-    pdf.save(`${ticket.movie?.title || ticket.bookingInfo?.movie}-ticket.pdf`);
+      const canvas = await html2canvas(ticketElement, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: "#0B0F19",
+        logging: false,
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+
+      const pdf = new jsPDF("portrait", "mm", "a4");
+
+      const pageWidth = 210;
+      const pageHeight = 297;
+
+      const margin = 10;
+
+      const contentWidth = pageWidth - margin * 2;
+      const contentHeight = pageHeight - margin * 2;
+
+      const imageHeight =
+        (canvas.height * contentWidth) / canvas.width;
+
+      let remainingHeight = imageHeight;
+
+      // First page
+      pdf.addImage(
+        imgData,
+        "PNG",
+        margin,
+        margin,
+        contentWidth,
+        imageHeight
+      );
+
+      remainingHeight -= contentHeight;
+
+      // Additional pages
+      while (remainingHeight > 0) {
+        pdf.addPage();
+
+        const yPosition =
+          margin -
+          (imageHeight - remainingHeight);
+
+        pdf.addImage(
+          imgData,
+          "PNG",
+          margin,
+          yPosition,
+          contentWidth,
+          imageHeight
+        );
+
+        remainingHeight -= contentHeight;
+      }
+
+      const movieName =
+        ticket.movie?.title ||
+        ticket.bookingInfo?.movie ||
+        "Velora-Cinema";
+
+      pdf.save(`${movieName}-ticket.pdf`);
+    } catch (error) {
+      console.error("PDF download failed:", error);
+      alert("Unable to download ticket. Please try again.");
+    }
   }
-
   return (
     <div className="min-h-screen bg-[#0B0F19] px-6 py-12 text-white">
       <div className="mx-auto max-w-3xl">
@@ -253,7 +331,12 @@ function Ticket() {
 
               <img
                 src={moviePoster}
-                alt={ticket.movie?.title || ticket.bookingInfo?.movie || "Movie Poster"}
+                alt={
+                  ticket.movie?.title ||
+                  ticket.bookingInfo?.movie ||
+                  "Movie Poster"
+                }
+                crossOrigin="anonymous"
                 className="h-28 w-20 rounded-2xl object-cover"
                 loading="eager"
                 onError={(e) => {
