@@ -81,6 +81,7 @@ function Navbar() {
       setLoading(true);
       setError("");
 
+      // Validation for signup
       if (!isLogin) {
         if (!name.trim()) {
           setError("Name is required.");
@@ -93,22 +94,85 @@ function Navbar() {
         }
       }
 
-      const endpoint = isLogin ? "/auth/login" : "/auth/register";
+      let loginData;
 
-      const payload = isLogin
-        ? { email, password }
-        : { name, email, password };
+      if (isLogin) {
+        // =========================
+        // LOGIN
+        // =========================
+        const response = await API.post("/auth/login", {
+          email,
+          password,
+        });
 
-      const { data } = await API.post(endpoint, payload);
-      console.log("LOGIN RESPONSE:", data);
+        loginData = response.data;
 
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
+        if (!loginData.success || !loginData.token) {
+          throw new Error(
+            loginData.message || "Login failed."
+          );
+        }
+      } else {
+        // =========================
+        // REGISTER
+        // =========================
+        const registerResponse = await API.post(
+          "/auth/register",
+          {
+            name,
+            email,
+            password,
+          }
+        );
 
-      setUser(data.user);
+        const registerData = registerResponse.data;
 
+        console.log("REGISTER RESPONSE:", registerData);
+
+        if (!registerData.success) {
+          throw new Error(
+            registerData.message || "Registration failed."
+          );
+        }
+
+        // =========================
+        // LOGIN AFTER REGISTER
+        // =========================
+        const loginResponse = await API.post(
+          "/auth/login",
+          {
+            email,
+            password,
+          }
+        );
+
+        loginData = loginResponse.data;
+
+        console.log("LOGIN AFTER REGISTER:", loginData);
+
+        if (!loginData.success || !loginData.token) {
+          throw new Error(
+            loginData.message || "Automatic login failed."
+          );
+        }
+      }
+
+      // =========================
+      // STORE REAL JWT
+      // =========================
+      localStorage.setItem("token", loginData.token);
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify(loginData.user)
+      );
+
+      setUser(loginData.user);
+
+      // Close modal
       setLoginOpen(false);
 
+      // Clear form
       setName("");
       setEmail("");
       setPassword("");
@@ -116,9 +180,12 @@ function Navbar() {
 
       navigate("/");
     } catch (err) {
+      console.error("Authentication error:", err);
+
       setError(
         err.response?.data?.message ||
-        "Authentication failed."
+          err.message ||
+          "Authentication failed."
       );
     } finally {
       setLoading(false);
