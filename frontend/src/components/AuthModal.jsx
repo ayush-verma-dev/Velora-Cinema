@@ -1,3 +1,4 @@
+import API from "../services/api";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -58,26 +59,103 @@ function AuthModal({ open, onClose }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (!validate()) return;
 
-    const user = {
-        name: isLogin ? "Ayush" : form.name,
-        email: form.email,
-    };
+    try {
+      setErrors({});
 
-    localStorage.setItem("veloraUser", JSON.stringify(user));
+      if (isLogin) {
+        // LOGIN
+        const response = await API.post("/auth/login", {
+          email: form.email,
+          password: form.password,
+        });
 
-    onClose();
+        const data = response.data;
 
-    window.location.reload();
+        if (!data.success || !data.token) {
+          throw new Error(data.message || "Login failed.");
+        }
 
-    setForm({
+        // Store real JWT token
+        localStorage.setItem("token", data.token);
+
+        // Store real user data
+        localStorage.setItem("user", JSON.stringify(data.user));
+
+        // Keep compatibility with existing UI
+        localStorage.setItem("veloraUser", JSON.stringify(data.user));
+
+        onClose();
+
+        window.location.reload();
+      } else {
+        // REGISTER
+        const registerResponse = await API.post("/auth/register", {
+          name: form.name,
+          email: form.email,
+          password: form.password,
+        });
+
+        const registerData = registerResponse.data;
+
+        if (!registerData.success) {
+          throw new Error(
+            registerData.message || "Registration failed."
+          );
+        }
+
+        // Registration endpoint does not return a JWT,
+        // so automatically login after successful registration.
+        const loginResponse = await API.post("/auth/login", {
+          email: form.email,
+          password: form.password,
+        });
+
+        const loginData = loginResponse.data;
+
+        if (!loginData.success || !loginData.token) {
+          throw new Error(
+            loginData.message || "Automatic login failed."
+          );
+        }
+
+        // Store REAL JWT
+        localStorage.setItem("token", loginData.token);
+
+        // Store user
+        localStorage.setItem(
+          "user",
+          JSON.stringify(loginData.user)
+        );
+
+        localStorage.setItem(
+          "veloraUser",
+          JSON.stringify(loginData.user)
+        );
+
+        onClose();
+
+        window.location.reload();
+      }
+
+      setForm({
         name: "",
         email: "",
         password: "",
         confirmPassword: "",
-    });
+      });
+    } catch (error) {
+      console.error("Authentication error:", error);
+
+      setErrors({
+        general:
+          error.response?.data?.message ||
+          error.message ||
+          "Something went wrong. Please try again.",
+      });
+    }
   };
 
   return (
