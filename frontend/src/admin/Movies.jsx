@@ -4,6 +4,10 @@ import API from "../services/api";
 import AddMovieModal from "./AddMovieModal";
 import DeleteMovieModal from "./DeleteMovieModal";
 
+const BACKEND_URL = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000/api"
+).replace(/\/api\/?$/, "");
+
 function Movies() {
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +34,31 @@ function Movies() {
     } finally {
       setLoading(false);
     }
+  }
+
+  // =========================
+  // POSTER URL
+  // =========================
+  function getPosterUrl(poster) {
+    if (!poster) {
+      return "https://placehold.co/140x200/111827/FACC15?text=No+Poster";
+    }
+
+    // If backend/database already gives a complete URL
+    if (
+      poster.startsWith("http://") ||
+      poster.startsWith("https://")
+    ) {
+      return poster;
+    }
+
+    // Convert Windows path to normal URL path
+    const fileName = poster
+      .replace(/\\/g, "/")
+      .split("/")
+      .pop();
+
+    return `${BACKEND_URL}/${fileName}`;
   }
 
   // =========================
@@ -82,7 +111,10 @@ function Movies() {
       setSelectedMovie(null);
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.message || "Failed to delete movie.");
+      alert(
+        error.response?.data?.message ||
+          "Failed to delete movie."
+      );
     } finally {
       setDeleteLoading(false);
     }
@@ -94,6 +126,7 @@ function Movies() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-bold">Movies</h1>
+
           <p className="mt-2 text-gray-400">
             Manage all movies available in Velora Cinema.
           </p>
@@ -136,25 +169,42 @@ function Movies() {
                   key={movie._id}
                   className="border-b border-white/5 transition hover:bg-white/5"
                 >
+                  {/* Poster */}
                   <td className="p-4">
                     <img
-                      src={
-                        movie.poster
-                          ? `http://localhost:5000/${movie.poster
-                              .split(/[\\/]/)
-                              .pop()}`
-                          : "https://placehold.co/140x200/111827/FACC15?text=No+Poster"
-                      }
-                      alt={movie.title}
+                      src={getPosterUrl(movie.poster)}
+                      alt={movie.title || "Movie Poster"}
                       className="h-20 w-14 rounded-lg object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src =
+                          "https://placehold.co/140x200/111827/FACC15?text=No+Poster";
+                      }}
                     />
                   </td>
 
-                  <td className="p-4 font-semibold">{movie.title}</td>
-                  <td className="p-4 text-gray-300">{movie.genre}</td>
-                  <td className="p-4 text-gray-300">{movie.language}</td>
-                  <td className="p-4 text-gray-300">{movie.duration}</td>
+                  {/* Title */}
+                  <td className="p-4 font-semibold">
+                    {movie.title}
+                  </td>
 
+                  {/* Genre */}
+                  <td className="p-4 text-gray-300">
+                    {movie.genre}
+                  </td>
+
+                  {/* Language */}
+                  <td className="p-4 text-gray-300">
+                    {movie.language}
+                  </td>
+
+                  {/* Duration */}
+                  <td className="p-4 text-gray-300">
+                    {movie.duration}
+                  </td>
+
+                  {/* Actions */}
                   <td className="p-4">
                     <div className="flex gap-3">
                       {/* Edit */}
